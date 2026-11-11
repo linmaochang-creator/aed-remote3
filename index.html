@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0f141b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="AED遙控器">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>AED 訓練語音遙控器</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
+<style>
+/* Layout: 手持遙控器。上方語言列，其次兩個自動流程鍵，再來 9 個單步大按鍵，底部固定停止鍵。深色單一主題，避免強光反光。 */
+:root{
+  --bg:#0f141b;--panel:#18202b;--line:#2a3544;--txt:#f3f5f8;--sub:#93a0b2;
+  --blue:#2f6fed;--violet:#7a4fe0;--amber:#d9780f;--yellow:#f2c200;--green:#1f9d55;--red:#d93a2f;--teal:#0e8fa8;--pink:#d6336c;
+  --warn:#ffd166;
+  --font:"Noto Sans TC","PingFang TC","Microsoft JhengHei","Segoe UI",system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+html{height:100%}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--txt);font-family:var(--font);
+  padding-block:8px 0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;overscroll-behavior:none}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0 8px}
+h1{font-size:17px;margin:0;font-weight:900;letter-spacing:.02em}
+.hbtn{background:var(--panel);color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font:500 15px var(--font)}
+.langs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:6px}
+.lg{padding:10px 2px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--txt);font:500 14px var(--font)}
+.lg[aria-pressed="true"]{background:var(--blue);border-color:var(--blue);font-weight:700}
+#status{font-size:14px;line-height:1.45;color:var(--sub);text-align:center;min-height:42px;padding:4px 0 8px}
+#status b{color:var(--warn);font-weight:700}
+.sec{font-size:12px;color:var(--sub);letter-spacing:.08em;margin:2px 0 6px}
+.flows{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.f{border-radius:16px;border:2px solid;background:var(--panel);color:var(--txt);min-height:84px;padding:8px;font:700 17px/1.3 var(--font);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;text-align:center;box-shadow:0 4px 0 rgba(0,0,0,.45)}
+.f small{font-size:12px;font-weight:400;color:var(--sub);line-height:1.35}
+.f:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.45)}
+.fA{border-color:var(--amber)}
+.fB{border-color:var(--green)}
+main{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-content:start}
+.k{border:0;border-radius:18px;color:#fff;font:700 19px/1.3 var(--font);padding:10px 8px;min-height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;text-align:center;box-shadow:0 4px 0 rgba(0,0,0,.45);transition:transform .05s}
+.k:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.45)}
+.k:focus-visible,.f:focus-visible,.hbtn:focus-visible,.lg:focus-visible,#stop:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.k .n{font-size:26px;font-weight:900;opacity:.92;font-variant-numeric:tabular-nums}
+.k small{font-size:12.5px;font-weight:400;opacity:.9}
+.k.playing,.f.playing{outline:4px solid #fff;outline-offset:2px;animation:pulse .8s infinite}
+@keyframes pulse{50%{outline-color:transparent}}
+@media (prefers-reduced-motion:reduce){.k.playing,.f.playing{animation:none}}
+.c1,.c2{background:var(--blue)}
+.c3{background:var(--violet)}
+.c4{background:var(--amber)}
+.c5{background:var(--yellow);color:#171717}
+.c6{background:var(--green)}
+.c7{background:var(--red)}
+.c8{background:var(--teal)}
+.c9{background:var(--pink)}
+.dock{position:sticky;bottom:0;margin-top:12px;padding:8px 0 max(10px,env(safe-area-inset-bottom,0px));background:var(--bg)}
+#stop{width:100%;height:60px;border:1px solid var(--line);border-radius:16px;background:var(--panel);color:var(--txt);font:700 19px var(--font)}
+dialog{width:92%;max-width:440px;max-height:90%;overflow:auto;border:1px solid var(--line);border-radius:16px;background:var(--panel);color:var(--txt);padding:16px;font-family:var(--font)}
+dialog::backdrop{background:rgba(0,0,0,.65)}
+dialog h2{margin:0 0 10px;font-size:17px}
+.row{margin:14px 0}
+.row>label{display:block;font-size:14px;color:var(--sub);margin-bottom:4px}
+.row.inline{display:flex;align-items:center;gap:8px}
+.row.inline label{margin:0;color:var(--txt)}
+input[type=range]{width:100%;accent-color:var(--blue)}
+input[type=checkbox]{width:20px;height:20px;accent-color:var(--blue)}
+select{width:100%;padding:8px;border-radius:8px;background:var(--bg);color:var(--txt);border:1px solid var(--line);font:15px var(--font)}
+.cust{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:8px 0;padding:8px;border:1px solid var(--line);border-radius:10px}
+.ct{flex:1 1 100%;min-width:0;font-size:14px}
+.ct small{display:block;color:var(--sub);font-size:12px;line-height:1.4;margin-top:2px;-webkit-user-select:text;user-select:text}
+.cb{display:flex;flex-wrap:wrap;gap:6px}
+.cb button{background:var(--line);color:var(--txt);border:0;border-radius:8px;padding:7px 10px;font:13px var(--font)}
+.cb button.rec{background:var(--red)}
+.note{font-size:12px;color:var(--sub);line-height:1.5;margin:6px 0 0}
+.cur{font-size:13px;color:var(--warn);margin:0 0 4px}
+</style>
+</head>
+<body>
+<header>
+  <h1>AED 訓練語音遙控器</h1>
+  <button class="hbtn" id="openSet" type="button">設定</button>
+</header>
+<div class="langs" id="langs" role="group" aria-label="語言"></div>
+<div id="status" role="status"></div>
+
+<div class="sec">自動流程</div>
+<div class="flows" id="flows"></div>
+
+<div class="sec">單步按鍵</div>
+<main id="pad"></main>
+
+<div class="dock"><button id="stop" type="button">■ 全部停止</button></div>
+
+<dialog id="dlg">
+  <h2>設定</h2>
+  <div class="row"><label for="vol">音量 <span id="volv"></span></label><input type="range" id="vol" min="0" max="1" step="0.05"></div>
+  <div class="row"><label for="rate">語音速度 <span id="ratev"></span></label><input type="range" id="rate" min="0.7" max="1.4" step="0.05"></div>
+  <div class="row"><label for="voiceSel" id="voiceLbl">語音聲音</label><select id="voiceSel"></select></div>
+  <div class="row"><label for="bpm">節拍器／音樂速度（BPM）<span id="bpmv"></span></label><input type="range" id="bpm" min="100" max="130" step="1"></div>
+
+  <h2 style="margin-top:18px">自動流程時間</h2>
+  <div class="row"><label for="tP">貼電擊片時間（自動流程用）<span id="tPv"></span></label><input type="range" id="tP" min="2" max="20" step="1"></div>
+  <div class="row"><label for="tG">插插頭時間（自動流程用）<span id="tGv"></span></label><input type="range" id="tG" min="2" max="12" step="1"></div>
+  <div class="row"><label for="tA">分析時間 <span id="tAv"></span></label><input type="range" id="tA" min="2" max="12" step="1"></div>
+  <div class="row"><label for="tC">充電時間 <span id="tCv"></span></label><input type="range" id="tC" min="2" max="10" step="1"></div>
+  <div class="row"><label for="tS">等待電擊時間 <span id="tSv"></span></label><input type="range" id="tS" min="2" max="12" step="1"></div>
+  <div class="row inline"><input type="checkbox" id="autoM"><label for="autoM">流程結束進入 CPR 後，自動開始節拍器</label></div>
+
+  <h2 style="margin-top:18px">自訂音檔（<span id="custLang"></span>）</h2>
+  <p class="note">每一句可上傳錄音檔，或直接用手機錄音，會取代內建語音。檔案只存在這個瀏覽器。第 9 鍵音樂各語言共用。</p>
+  <div id="custList"></div>
+  <p class="note" id="recNote"></p>
+
+  <div class="row"><button class="hbtn" id="testV" type="button">試聽第 3 句</button> <button class="hbtn" id="closeSet" type="button" style="float:right">完成</button></div>
+</dialog>
+<input type="file" id="file" accept="audio/*" hidden>
+
+<script>
+/* ---------- 語言與語音稿 ---------- */
+const LANGS={
+  zh:{name:'華語',code:'zh-TW',re:/zh|cmn/i},
+  id:{name:'印尼語',code:'id-ID',re:/^(id|in)[-_]/i},
+  vi:{name:'越南語',code:'vi-VN',re:/^vi/i}
+};
+const LORDER=['zh','id','vi'];
+const CHIP={zh:'華語',id:'印尼語',vi:'越南語'};
+const TXT={
+  zh:{
+    1:'按照圖示，貼在病人胸部皮膚上。',
+    2:'將電擊片插頭，插在亮燈處插座上。',
+    3:'正在分析病人心率，不要觸碰病人。',
+    4:'建議電擊，正在充電，不要接觸病人身體。',
+    5:'立刻進行電擊，按下黃色閃動按鈕。',
+    6:'電擊完成。',
+    7:'開始心肺復甦術。',
+    ns:'不建議電擊。'
+  },
+  id:{
+    1:'Tempelkan pad sesuai gambar pada kulit dada pasien.',
+    2:'Colokkan konektor pad ke soket yang menyala.',
+    3:'Sedang menganalisis irama jantung pasien. Jangan sentuh pasien.',
+    4:'Kejut listrik disarankan. Sedang mengisi daya. Jangan sentuh tubuh pasien.',
+    5:'Segera berikan kejut listrik. Tekan tombol kuning yang berkedip.',
+    6:'Kejut listrik selesai.',
+    7:'Mulai resusitasi jantung paru.',
+    ns:'Kejut listrik tidak disarankan.'
+  },
+  vi:{
+    1:'Dán miếng điện cực lên da ngực bệnh nhân theo hình minh họa.',
+    2:'Cắm đầu nối miếng điện cực vào ổ cắm đang sáng đèn.',
+    3:'Đang phân tích nhịp tim bệnh nhân. Không chạm vào bệnh nhân.',
+    4:'Khuyến cáo sốc điện. Đang sạc. Không chạm vào người bệnh nhân.',
+    5:'Sốc điện ngay. Nhấn nút màu vàng đang nhấp nháy.',
+    6:'Đã sốc điện xong.',
+    7:'Bắt đầu hồi sức tim phổi.',
+    ns:'Không khuyến cáo sốc điện.'
+  }
+};
+const KEYNAME={1:'貼電擊片',2:'插插頭',3:'分析心率',4:'建議電擊・充電',5:'立刻電擊',6:'電擊完成',7:'開始 CPR',ns:'不建議電擊（不需電擊流程用）'};
+const KEYS=[1,2,3,4,5,6,7,'ns'];
+
+const BTN=[
+ {id:1,t:'貼電擊片',s:'按照圖示貼在病人胸部皮膚上',c:'c1',type:'v',auto:1},
+ {id:2,t:'插插頭',s:'插頭插在亮燈處插座',c:'c2',type:'v',auto:1},
+ {id:3,t:'分析心率',s:'不要觸碰病人',c:'c3',type:'v',auto:1},
+ {id:4,t:'建議電擊・充電',s:'不要接觸病人身體',c:'c4',type:'v',auto:1},
+ {id:5,t:'立刻電擊',s:'按下黃色閃動按鈕',c:'c5',type:'v',auto:1},
+ {id:6,t:'電擊完成',s:'',c:'c6',type:'v'},
+ {id:7,t:'開始 CPR',s:'開始心肺復甦術',c:'c7',type:'v'},
+ {id:8,t:'節拍器',s:'120 次／分',c:'c8',type:'m'},
+ {id:9,t:'音樂',s:'120 BPM',c:'c9',type:'s'}
+];
+const FLOWS=[
+ {id:'A',cls:'fA',t:'▶ 自動全流程',s:'貼片→插頭→分析→充電→電擊→完成→CPR'},
+ {id:'B',cls:'fB',t:'▶ 不需電擊流程',s:'貼片→插頭→分析→不建議電擊→CPR'}
+];
+
+const $=s=>document.querySelector(s);
+const store={get(k,d){try{const v=localStorage.getItem('aed_'+k);return v===null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem('aed_'+k,JSON.stringify(v))}catch(e){}}};
+let S={
+  vol:store.get('vol',1),rate:store.get('rate',0.95),bpm:store.get('bpm',120),
+  voices:store.get('voices',{}),lang:store.get('lang','zh'),
+  tP:store.get('tP',6),tG:store.get('tG',3),tA:store.get('tA',5),tC:store.get('tC',4),tS:store.get('tS',5),autoM:store.get('autoM',true)
+};
+if(!LANGS[S.lang])S.lang='zh';
+
+/* ---------- 自訂音檔（IndexedDB） ---------- */
+let db;
+const dbReady=new Promise(res=>{try{const r=indexedDB.open('aed',1);r.onupgradeneeded=()=>r.result.createObjectStore('f');r.onsuccess=()=>{db=r.result;res()};r.onerror=()=>res()}catch(e){res()}});
+const dbOp=(mode,fn)=>new Promise(res=>{if(!db)return res();try{const t=db.transaction('f',mode);const rq=fn(t.objectStore('f'));t.oncomplete=()=>res(rq&&rq.result);t.onerror=()=>res()}catch(e){res()}});
+const getF=id=>dbOp('readonly',s=>s.get(id));
+const putF=(id,b)=>dbOp('readwrite',s=>s.put(b,id));
+const delF=id=>dbOp('readwrite',s=>s.delete(id));
+/* 華語沿用舊鍵名 b1..b9，其他語言 id_b1 等，音樂 b9 共用 */
+const cache={};
+async function refreshCache(){
+  await dbReady;
+  for(const L of LORDER)for(const k of KEYS)cache[fkey(k,L)]=await getF(fkey(k,L));
+  cache.b9=await getF('b9');
+}
+const fkey=(k,L=S.lang)=>k===9?'b9':(L==='zh'?'b'+k:L+'_b'+k);
+
+/* ---------- 音訊引擎 ---------- */
+let ctx,master;
+function ensureCtx(){
+  if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();master=ctx.createGain();master.connect(ctx.destination)}
+  master.gain.value=S.vol;
+  if(ctx.state==='suspended')ctx.resume();
+}
+let curAudio=null,curBtn=null,curDone=null,playSeq=0,simT=null;
+let mTimer=null,mOn=false,sOn=false,nextT=0,beat=0,musicAudio=null;
+let flowOn=null,flowId=0,sleepT=null,sleepRes=null,prefix='';
+
+function setStatus(h){$('#status').innerHTML=h}
+function idleStatus(){
+  if(mOn)return '播放中：<b>8. 節拍器 '+S.bpm+' 次/分</b>';
+  if(sOn)return '播放中：<b>9. 音樂 '+S.bpm+' BPM</b>';
+  return '點按鍵播放語音　語言：<b>'+LANGS[S.lang].name+'</b>';
+}
+function mark(){
+  document.querySelectorAll('[data-id],[data-flow]').forEach(k=>{
+    let on=false;
+    if(k.dataset.flow)on=flowOn===k.dataset.flow;
+    else{const id=+k.dataset.id;on=(curBtn===id)||(id===8&&mOn)||(id===9&&sOn)}
+    k.classList.toggle('playing',on);
+  });
+}
+function stopVoice(){
+  playSeq++;
+  try{speechSynthesis.cancel()}catch(e){}
+  if(curAudio){curAudio.onended=null;curAudio.onerror=null;curAudio.pause();curAudio=null}
+  clearTimeout(simT);
+  curBtn=null;
+  const d=curDone;curDone=null;if(d)d();
+}
+function stopLoops(){
+  mOn=false;sOn=false;clearInterval(mTimer);mTimer=null;
+  if(musicAudio){musicAudio.pause();musicAudio=null}
+}
+function sleep(ms){return new Promise(r=>{sleepRes=r;sleepT=setTimeout(()=>{sleepRes=null;r()},ms)})}
+function stopFlow(){
+  flowId++;flowOn=null;prefix='';
+  clearTimeout(sleepT);
+  if(sleepRes){const r=sleepRes;sleepRes=null;r()}
+}
+function stopAll(){stopFlow();stopVoice();stopLoops();mark();setStatus('已停止')}
+
+/* ---------- 語音 ---------- */
+let voices=[];
+function loadVoices(){
+  try{voices=(speechSynthesis.getVoices()||[])}catch(e){voices=[]}
+  renderVoiceSel();
+}
+function langVoices(L){return voices.filter(v=>LANGS[L].re.test(v.lang))}
+function pickVoice(L){
+  const chosen=voices.find(v=>v.voiceURI===S.voices[L]);
+  if(chosen)return chosen;
+  if(L==='zh')return voices.find(v=>/zh[-_]TW/i.test(v.lang))||langVoices(L)[0];
+  return langVoices(L)[0];
+}
+function renderVoiceSel(){
+  const sel=$('#voiceSel');if(!sel)return;
+  const L=S.lang,list=langVoices(L);
+  $('#voiceLbl').textContent='語音聲音（'+LANGS[L].name+'）';
+  sel.innerHTML='';
+  if(!list.length){
+    sel.innerHTML='<option>此裝置沒有'+LANGS[L].name+'語音，請錄音或上傳</option>';
+    return;
+  }
+  list.forEach(v=>{const o=document.createElement('option');o.value=v.voiceURI;o.textContent=v.name+' ('+v.lang+')';sel.appendChild(o)});
+  if(S.voices[L]&&list.some(v=>v.voiceURI===S.voices[L]))sel.value=S.voices[L];
+}
+function speak(text,L,done){
+  const hasTTS='speechSynthesis' in window;
+  const v=hasTTS?pickVoice(L):null;
+  if(!hasTTS||(!v&&voices.length>0)){
+    // 沒有可用語音：畫面顯示文字，並依字數估算時間讓流程繼續
+    setStatus(prefix+'<b>'+text+'</b><br>（此裝置沒有'+LANGS[L].name+'語音，請到設定錄音或上傳）');
+    const ms=Math.max(1800,text.length*(L==='zh'?280:80));
+    simT=setTimeout(done,ms);
+    return;
+  }
+  const u=new SpeechSynthesisUtterance(text);
+  if(v){u.voice=v;u.lang=v.lang}else u.lang=LANGS[L].code;
+  u.rate=S.rate;u.volume=S.vol;
+  u.onend=done;u.onerror=done;
+  speechSynthesis.speak(u);
+}
+if('speechSynthesis' in window){loadVoices();speechSynthesis.onvoiceschanged=loadVoices}
+
+let ttsUnlocked=false;
+function unlockTTS(){
+  if(ttsUnlocked||!('speechSynthesis' in window))return;
+  ttsUnlocked=true;
+  try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch(e){}
+}
+/* 播放一句，播完才 resolve（被停止也會 resolve） */
+function playKey(key,hl){
+  ensureCtx();unlockTTS();
+  stopVoice();
+  const seq=++playSeq;
+  const L=S.lang,text=TXT[L][key];
+  curBtn=hl;mark();
+  setStatus(prefix+'播放中：<b>'+text+'</b>');
+  return new Promise(res=>{
+    curDone=res;
+    const end=()=>{
+      if(seq!==playSeq)return;
+      curDone=null;curBtn=null;curAudio=null;mark();
+      if(!flowOn)setStatus(idleStatus());
+      res();
+    };
+    const blob=cache[fkey(key,L)];
+    if(blob){
+      const url=URL.createObjectURL(blob);
+      const a=new Audio(url);a.volume=S.vol;curAudio=a;
+      const fin=()=>{URL.revokeObjectURL(url);end()};
+      a.onended=fin;a.onerror=fin;a.play().catch(fin);
+    }else{
+      speak(text,L,end);
+    }
+  });
+}
+
+/* ---------- 自動流程 ---------- */
+async function runFlow(kind){
+  stopFlow();stopVoice();stopLoops();
+  const my=++flowId;flowOn=kind;mark();
+  const alive=()=>my===flowId;
+  prefix='<span>'+(kind==='A'?'自動全流程':'不需電擊流程')+'　</span>';
+  const step=async(key,hl,wait)=>{
+    if(!alive())return false;
+    await playKey(key,hl);
+    if(!alive())return false;
+    if(wait>0){await sleep(wait*1000)}
+    return alive();
+  };
+  let ok;
+  if(kind==='A'){
+    ok=await step(1,1,S.tP)&&await step(2,2,S.tG)&&await step(3,3,S.tA)&&await step(4,4,S.tC)&&await step(5,5,S.tS)&&await step(6,6,1)&&await step(7,7,0);
+  }else{
+    ok=await step(1,1,S.tP)&&await step(2,2,S.tG)&&await step(3,3,S.tA)&&await step('ns',null,1)&&await step(7,7,0);
+  }
+  if(!ok||!alive())return;
+  flowOn=null;prefix='';mark();
+  if(S.autoM){stopLoops();startLoop('m')}else setStatus(idleStatus());
+}
+
+/* ---------- 節拍器與合成音樂 ---------- */
+function click(t,accent){
+  const o=ctx.createOscillator(),g=ctx.createGain();
+  o.type='square';o.frequency.value=accent?1500:1000;
+  g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(accent?0.9:0.6,t+0.002);g.gain.exponentialRampToValueAtTime(0.0001,t+0.06);
+  o.connect(g);g.connect(master);o.start(t);o.stop(t+0.08);
+}
+function tone(t,f,dur,type,vol){
+  const o=ctx.createOscillator(),g=ctx.createGain();
+  o.type=type;o.frequency.value=f;
+  g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+0.01);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.connect(g);g.connect(master);o.start(t);o.stop(t+dur+0.02);
+}
+function kick(t){
+  const o=ctx.createOscillator(),g=ctx.createGain();
+  o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(45,t+0.12);
+  g.gain.setValueAtTime(0.9,t);g.gain.exponentialRampToValueAtTime(0.0001,t+0.18);
+  o.connect(g);g.connect(master);o.start(t);o.stop(t+0.2);
+}
+const MEL=[72,76,79,76, 74,77,81,77, 76,79,83,79, 72,79,76,72,
+           69,72,76,72, 71,74,77,74, 72,76,79,76, 67,71,74,79];
+const BASS=[48,48,53,53,55,55,48,48];
+const mf=n=>440*Math.pow(2,(n-69)/12);
+function scheduler(){
+  const spb=60/S.bpm;
+  while(nextT<ctx.currentTime+0.25){
+    if(mOn)click(nextT,beat%4===0);
+    if(sOn){
+      kick(nextT);
+      const m=MEL[beat%MEL.length];if(m)tone(nextT,mf(m),spb*0.9,'triangle',0.35);
+      if(beat%4===0)tone(nextT,mf(BASS[Math.floor(beat/4)%BASS.length]),spb*3.6,'sine',0.5);
+      if(beat%2===1)tone(nextT+spb/2,8000,0.03,'square',0.05);
+    }
+    nextT+=spb;beat++;
+  }
+}
+async function startLoop(kind){
+  ensureCtx();
+  if(kind==='m'?mOn:sOn){stopLoops();mark();setStatus(idleStatus());return}
+  stopVoice();stopLoops();
+  if(kind==='s'){
+    const blob=cache.b9;
+    if(blob){
+      musicAudio=new Audio(URL.createObjectURL(blob));musicAudio.loop=true;musicAudio.volume=S.vol;
+      musicAudio.play().catch(()=>{});sOn=true;mark();setStatus('播放中：<b>9. 音樂（自訂）</b>');return;
+    }
+  }
+  if(kind==='m')mOn=true;else sOn=true;
+  beat=0;nextT=ctx.currentTime+0.08;
+  mTimer=setInterval(scheduler,50);scheduler();
+  mark();setStatus(idleStatus());
+}
+function press(b){
+  if(navigator.vibrate)try{navigator.vibrate(15)}catch(e){}
+  stopFlow();
+  if(b.type==='v'){if(b.auto)stopLoops();playKey(b.id,b.id)}
+  else startLoop(b.type==='m'?'m':'s');
+}
+
+/* ---------- 畫面 ---------- */
+const pad=$('#pad');
+BTN.forEach(b=>{
+  const k=document.createElement('button');
+  k.type='button';k.className='k '+b.c;k.dataset.id=b.id;
+  k.innerHTML='<span class="n">'+b.id+'</span><span>'+b.t+'</span>'+(b.s?'<small>'+b.s+'</small>':'');
+  k.addEventListener('click',()=>press(b));
+  pad.appendChild(k);
+});
+const fbox=$('#flows');
+FLOWS.forEach(f=>{
+  const k=document.createElement('button');
+  k.type='button';k.className='f '+f.cls;k.dataset.flow=f.id;
+  k.innerHTML='<span>'+f.t+'</span><small>'+f.s+'</small>';
+  k.addEventListener('click',()=>{if(navigator.vibrate)try{navigator.vibrate(15)}catch(e){}runFlow(f.id)});
+  fbox.appendChild(k);
+});
+$('#stop').onclick=stopAll;
+
+const lbox=$('#langs');
+function renderLangs(){
+  lbox.innerHTML='';
+  LORDER.forEach(L=>{
+    const b=document.createElement('button');
+    b.type='button';b.className='lg';b.textContent=CHIP[L];
+    b.setAttribute('aria-pressed',L===S.lang?'true':'false');
+    b.onclick=()=>{
+      if(L===S.lang)return;
+      stopFlow();stopVoice();
+      S.lang=L;store.set('lang',L);
+      renderLangs();renderVoiceSel();mark();setStatus(idleStatus());
+    };
+    lbox.appendChild(b);
+  });
+}
+
+const dlg=$('#dlg');
+function syncUI(){
+  $('#vol').value=S.vol;$('#volv').textContent=Math.round(S.vol*100)+'%';
+  $('#rate').value=S.rate;$('#ratev').textContent=S.rate.toFixed(2)+'x';
+  $('#bpm').value=S.bpm;$('#bpmv').textContent=S.bpm;
+  $('#tP').value=S.tP;$('#tPv').textContent=S.tP+' 秒';
+  $('#tG').value=S.tG;$('#tGv').textContent=S.tG+' 秒';
+  $('#tA').value=S.tA;$('#tAv').textContent=S.tA+' 秒';
+  $('#tC').value=S.tC;$('#tCv').textContent=S.tC+' 秒';
+  $('#tS').value=S.tS;$('#tSv').textContent=S.tS+' 秒';
+  $('#autoM').checked=!!S.autoM;
+  $('#custLang').textContent=LANGS[S.lang].name;
+}
+$('#openSet').onclick=async()=>{syncUI();renderVoiceSel();await dbReady;await renderCust();dlg.showModal()};
+$('#closeSet').onclick=()=>{if(rec)rec.mr.stop();dlg.close()};
+$('#vol').oninput=e=>{S.vol=+e.target.value;store.set('vol',S.vol);if(master)master.gain.value=S.vol;if(curAudio)curAudio.volume=S.vol;if(musicAudio)musicAudio.volume=S.vol;syncUI()};
+$('#rate').oninput=e=>{S.rate=+e.target.value;store.set('rate',S.rate);syncUI()};
+$('#bpm').oninput=e=>{S.bpm=+e.target.value;store.set('bpm',S.bpm);syncUI()};
+$('#tP').oninput=e=>{S.tP=+e.target.value;store.set('tP',S.tP);syncUI()};
+$('#tG').oninput=e=>{S.tG=+e.target.value;store.set('tG',S.tG);syncUI()};
+$('#tA').oninput=e=>{S.tA=+e.target.value;store.set('tA',S.tA);syncUI()};
+$('#tC').oninput=e=>{S.tC=+e.target.value;store.set('tC',S.tC);syncUI()};
+$('#tS').oninput=e=>{S.tS=+e.target.value;store.set('tS',S.tS);syncUI()};
+$('#autoM').onchange=e=>{S.autoM=e.target.checked;store.set('autoM',S.autoM)};
+$('#voiceSel').onchange=e=>{S.voices[S.lang]=e.target.value;store.set('voices',S.voices)};
+$('#testV').onclick=()=>{stopFlow();playKey(3,null)};
+
+/* 自訂音檔：上傳、錄音、試聽、還原 */
+let pendingKey=null,rec=null;
+async function renderCust(){
+  const box=$('#custList');box.innerHTML='';
+  const items=KEYS.map(k=>({k,label:k+'. '+KEYNAME[k]})).map(x=>x);
+  items[7].label='不建議電擊（不需電擊流程用）';
+  items.push({k:9,label:'9. 音樂（各語言共用）'});
+  for(const it of items){
+    const key=fkey(it.k);
+    const has=await getF(key);
+    const d=document.createElement('div');d.className='cust';
+    const script=it.k===9?'':'<small>錄音稿：'+TXT[S.lang][it.k]+'</small>';
+    d.innerHTML='<div class="ct"><b>'+it.label+'</b>：'+(has?'已自訂':'內建')+script+'</div>';
+    const cb=document.createElement('div');cb.className='cb';
+    const mk=(txt,fn,cls)=>{const b=document.createElement('button');b.type='button';b.textContent=txt;if(cls)b.className=cls;b.onclick=fn;cb.appendChild(b)};
+    mk('上傳',()=>{pendingKey=key;$('#file').click()});
+    if(it.k!==9){
+      const recording=rec&&rec.key===key;
+      mk(recording?'■ 停止錄音':'● 錄音',()=>toggleRec(key),recording?'rec':'');
+      mk('試聽',()=>{stopFlow();playKey(it.k,null)});
+    }
+    if(has)mk('還原',async()=>{await delF(key);cache[key]=undefined;renderCust()});
+    d.appendChild(cb);box.appendChild(d);
+  }
+}
+$('#file').onchange=async e=>{
+  const f=e.target.files[0];e.target.value='';
+  if(f&&pendingKey){await putF(pendingKey,f);cache[pendingKey]=f;await renderCust()}
+};
+async function toggleRec(key){
+  const note=$('#recNote');
+  if(rec){rec.mr.stop();return}
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    const chunks=[];const mr=new MediaRecorder(stream);
+    mr.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+    mr.onstop=async()=>{
+      stream.getTracks().forEach(t=>t.stop());
+      rec=null;
+      if(chunks.length){const bl=new Blob(chunks,{type:mr.mimeType||'audio/webm'});await putF(key,bl);cache[key]=bl}
+      note.textContent='';
+      await renderCust();
+    };
+    rec={mr,key};mr.start();
+    note.textContent='錄音中，請照錄音稿念，念完按「停止錄音」。';
+    await renderCust();
+  }catch(e){
+    rec=null;
+    note.textContent='無法使用麥克風。請允許瀏覽器使用麥克風，並用 https 網址開啟；也可以改用「上傳」。';
+  }
+}
+
+async function lockScreen(){try{if('wakeLock' in navigator)await navigator.wakeLock.request('screen')}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')lockScreen()});
+document.addEventListener('click',lockScreen,{once:true});
+
+renderLangs();setStatus(idleStatus());refreshCache();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
